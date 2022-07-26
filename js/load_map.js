@@ -76,27 +76,100 @@ if (navigator.geolocation) {
 )}
 
 //THIS TAKES IN LON,LAT COORDINATES -> LEAFLET WILL CONVERT TO LAT,LON
+//ORDER IS UPPER LEFT, LOWER LEFT, LOWER RIGHT, UPPER RIGHT, UPPER LEFT
 var myData = [{
 "type": "FeatureCollection",
 "features": [{
     "type": "Feature",
     "properties": {
-    "popupContent": "GeoFence Area"
+    "popupContent": "C10"
     },
     "geometry": {
     "type": "Polygon",
-    "coordinates": [
-        [
-        [ -117.86574840545656, 34.983385725046716,],
-        [-117.83311128616334, 34.98333298303735],
-        [-117.83326148986818, 34.949975650454974 ],
-        [ -117.86561965942384, 34.95018670420248],
-        [ -117.86574840545656, 34.983385725046716]
-        ]
-    ]
+    "coordinates": [[[ -117.866667, 34.983333],
+        [-117.866667, 34.966667],
+        [-117.85, 34.966667],
+        [ -117.85, 34.983333],
+        [ -117.866667, 34.983333]]]
     }
-}]
-}];
+}]}, 
+{
+"type": "FeatureCollection",
+"features": [{
+    "type": "Feature",
+    "properties": {
+    "popupContent": "C11"
+    },
+    "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[-117.85, 34.966667],
+        [ -117.85, 34.983333],
+        [ -117.833333, 34.983333],
+        [-117.833333, 34.966667],
+        [ -117.85, 34.966667]]]
+        }
+    }]},
+{
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature",
+        "properties": {
+        "popupContent": "D10"
+        },
+        "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-117.866667, 34.966667],
+            [ -117.866667, 34.95],
+            [ -117.85, 34.95],
+            [-117.85, 34.966667],
+            [ -117.866667, 34.966667]]]
+            }
+    }]},
+{
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature",
+        "properties": {
+        "popupContent": "D11"
+        },
+        "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[ -117.85, 34.95],
+            [-117.85, 34.966667],
+            [-117.833333, 34.966667],
+            [ -117.833333, 34.95],
+            [ -117.85, 34.95]]]
+            }
+    }]}
+]
+
+// var states = [{
+//     "type": "Feature",
+//     "properties": {"party": "Republican"},
+//     "geometry": {
+//         "type": "Polygon",
+//         "coordinates": [[
+//             [-104.05, 48.99],
+//             [-97.22,  48.98],
+//             [-96.58,  45.94],
+//             [-104.03, 45.94],
+//             [-104.05, 48.99]
+//         ]]
+//     }
+// }, {
+//     "type": "Feature",
+//     "properties": {"party": "Democrat"},
+//     "geometry": {
+//         "type": "Polygon",
+//         "coordinates": [[
+//             [-109.05, 41.00],
+//             [-102.06, 40.99],
+//             [-102.03, 36.99],
+//             [-109.04, 36.99],
+//             [-109.05, 41.00]
+//         ]]
+//     }
+// }];
   
 var myGeoJson = L.geoJson(myData, {
     style: style,
