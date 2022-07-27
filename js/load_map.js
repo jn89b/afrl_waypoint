@@ -4,14 +4,20 @@
 var latit;
 var longit;
 var fov_marker;
-var wp_marker;
+
 var fov_to_wp_line;
 var new_coords;
+
+var wp_marker0;
+var wp_marker1;
+var wp_marker2;
+var wp_marker3;
 
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
 const wp_deg_side1 = 270;  
-const long_side_distance = 300; // distance between long side of waypoints
+const long_side_distance = 350; // distance between long side of waypoints
+const short_side_distance = 150;
  
 function style(feature) {
     return {
@@ -117,7 +123,7 @@ function computeBearing(marker1, marker2){
 }
 
 function computeDesGPS(marker, brng, d){
-    //compute desired gps location based on inputs of marker, brng(degrees) and distance(m)
+    //compute desired gps location based on inputs of marker, brng(degrees) and desired_distance(m)
     brng_rad = brng * Math.PI/180;
 
     lat1 = marker.getLatLng().lat * Math.PI/180;
@@ -135,43 +141,60 @@ function computeDesGPS(marker, brng, d){
 
 }
 
-function addSquareWP(fov_marker){
-    //makes square waypoint based on location of marker
-    lat = fov_marker.getLatLng().lat;
-    long = fov_marker.getLatLng().lng;
-
-    const des_dist = 150; // meters
-
-    new_latitude  = lat  + ((des_dist / R) * (180 / Math.PI));
-    new_longitude = long + ((des_dist / R) * (180 / Math.PI) / Math.cos(lat));   
-
-    wp_coords = [new_latitude, new_longitude];
-
-    return wp_coords;
+function removeMarker(marker, map){
+    if (marker) { 
+        map.removeLayer(marker); 
+    }
 }
 
-//button
+
+/*waypoint buton generates rectangle waypoint as follows:
+    0-------3
+    |       |
+    |       |
+    |       |
+    |       |
+    |       |    
+    1-------2
+*/
+
 let waypoint_btn = document.createElement("button");
 waypoint_btn.className = "setTestButton"
 waypoint_btn.innerHTML = "Set Waypoints";
 waypoint_btn.onclick = function () {
     if (fov_marker){
 
+        removeMarker(wp_marker0, map);
+        removeMarker(wp_marker1, map);
+        removeMarker(wp_marker2, map);
+        removeMarker(wp_marker3, map);
+
         bearing_ori_to_fov = computeBearing(origin_marker, fov_marker); // degrees
-
-        waypoint_coords = computeDesGPS(fov_marker, wp_deg_side1-bearing_ori_to_fov, long_side_distance/2);
-        waypoint_coords_1 = computeDesGPS(fov_marker, wp_deg_side0-bearing_ori_to_fov, long_side_distance/2);
-
-        wp_marker = new L.CircleMarker(waypoint_coords,
+        
+        waypoint_coords0 = computeDesGPS(fov_marker, wp_deg_side1-bearing_ori_to_fov, 
+            long_side_distance/2);
+        wp_marker0 = new L.CircleMarker(waypoint_coords0,
+            {color:'green'}).addTo(map);    
+        
+        waypoint_coords1 = computeDesGPS(fov_marker, wp_deg_side0-bearing_ori_to_fov, 
+            long_side_distance/2);
+        wp_marker1 = new L.CircleMarker(waypoint_coords1,
+            {color:'green'}).addTo(map);        
+        
+        waypoint_coords2 = computeDesGPS(wp_marker1, -bearing_ori_to_fov, 
+            short_side_distance);
+        wp_marker2 = new L.CircleMarker(waypoint_coords2,
             {color:'green'}).addTo(map);
             
-        wp_marker = new L.CircleMarker(waypoint_coords_1,
-            {color:'green'}).addTo(map);        
+        waypoint_coords3 = computeDesGPS(wp_marker0, -bearing_ori_to_fov, 
+            short_side_distance);
+        wp_marker3 = new L.CircleMarker(waypoint_coords3,
+            {color:'green'}).addTo(map);
 
-        bearing_fov_to_wp = computeBearing(fov_marker, wp_marker);
-        distance = computerHaversine(fov_marker, wp_marker);
+        bearing_fov_to_wp = computeBearing(fov_marker, wp_marker0);
+        distance = computerHaversine(fov_marker, wp_marker0);
             
-        console.log("wp coords", waypoint_coords);
+        console.log("wp coords", waypoint_coords0);
         console.log("fov coords", fov_marker.getLatLng());
     
         console.log("distance", distance);
@@ -289,7 +312,8 @@ var myGeoJson = L.geoJson(myData, {
 }).addTo(map);
   
 
-//set to one marker
+
+//double click to set fov marker
 map.on('dblclick', function (e) {
     if (fov_marker) { 
         map.removeLayer(fov_marker); 
