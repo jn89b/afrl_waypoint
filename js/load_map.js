@@ -1,17 +1,18 @@
-
-// // init map
-
+/**--------------DEFINE CONSTANTS AND VARS--------------------------------*/
 var latit;
 var longit;
-var fov_marker;
+var flight_alt; //meters
 
 var fov_to_wp_line;
 var new_coords;
 
+var fov_marker;
 var wp_marker0;
 var wp_marker1;
 var wp_marker2;
 var wp_marker3;
+
+var num_loops;
 
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
@@ -19,6 +20,8 @@ const wp_deg_side1 = 270;
 const long_side_distance = 350; // distance between long side of waypoints
 const short_side_distance = 150;
  
+
+/**--------------FUNCTIONS UTILIZED--------------------------------*/
 function style(feature) {
     return {
         fillColor: "#ff0000",
@@ -137,7 +140,7 @@ function computeDesGPS(marker, brng, d){
 
     lat_des = lat_des* 180/Math.PI;
     lon_des = lon_des * 180/Math.PI;
-    return [lat_des, lon_des];
+    return [lat_des, lon_des, parseInt(flight_alt)];
 
 }
 
@@ -147,7 +150,8 @@ function removeMarker(marker, map){
     }
 }
 
-
+/**--------------CREATING WIDGETS--------------------------------*/
+//creating button widgets
 /*waypoint buton generates rectangle waypoint as follows:
     0-------3
     |       |
@@ -157,17 +161,28 @@ function removeMarker(marker, map){
     |       |    
     1-------2
 */
-
 let waypoint_btn = document.createElement("button");
 waypoint_btn.className = "setTestButton"
 waypoint_btn.innerHTML = "Set Waypoints";
 waypoint_btn.onclick = function () {
-    if (fov_marker){
+    
+    flight_alt = document.getElementById("altitude_input").value;
+    console.log("altitude_input", flight_alt);
 
+    // if (!flight_alt){
+    //     alert("Set your flight altitude");
+    // }
+
+    if (!fov_marker || !flight_alt){
+        alert("Set your FOV Marker by double clicking on the map and or your flight attitude");
+    }
+
+    else{
         removeMarker(wp_marker0, map);
         removeMarker(wp_marker1, map);
         removeMarker(wp_marker2, map);
         removeMarker(wp_marker3, map);
+
 
         bearing_ori_to_fov = computeBearing(origin_marker, fov_marker); // degrees
         
@@ -201,28 +216,79 @@ waypoint_btn.onclick = function () {
         console.log("bearing_origin_to_wp", bearing_ori_to_fov);
         console.log("bearing_fov_to_wp", bearing_fov_to_wp);
     }
-    else{
-        alert("No inputs");
-    }
 };
 document.body.appendChild(waypoint_btn);
 
+//----create num_waypoints input----///////////////////////
+const input = document.createElement("input");
+input.setAttribute("id", "num_waypoints");
+input.setAttribute("type", "number");
+document.body.appendChild(input);
 
+const label = document.createElement("label");
+label.setAttribute("for", "num_waypoints");
+label.innerHTML = "Number of loops around waypoints: ";
+
+const numWaypointsText = document.getElementById("num_waypoints");
+document.body.insertBefore(label, numWaypointsText);
+
+//-------create altitude test input----------------------///// 
+const altitude_input = document.createElement("input");
+altitude_input.setAttribute("id", "altitude_input");
+altitude_input.setAttribute("type", "number");
+document.body.appendChild(altitude_input);
+
+const alt_label = document.createElement("alt_label");
+alt_label.setAttribute("for", "altitude_input");
+alt_label.innerHTML = "Set altitude height of test in meters: ";
+
+const altText = document.getElementById("altitude_input");
+document.body.insertBefore(alt_label, altText);
+
+//confirm button-------------------------------------------------------------
+const confirm_button = document.createElement("button");
+confirm_button.className = "confirmButton"
+confirm_button.innerHTML = "Confirm";
+
+confirm_button.onclick = function (){
+
+    num_loops = document.getElementById("num_waypoints").value;
+    console.log("entry value is", num_loops);
+
+    if (!flight_alt){
+        alert("Set your flight altitude")
+    }
+
+    if (!num_loops){
+        alert("Enter number of loops for waypoints")
+    }
+
+    if (!fov_marker){
+        alert("Set your FOV Marker")
+    }
+
+    if (!wp_marker0){
+        alert("Set your waypoints")
+    }
+
+
+}
+document.body.appendChild(confirm_button);
+
+
+/**--------------CREATING MAP--------------------------------*/
 const map = L.map('map',{
     center: [34.973328967646175, -117.85634994506837],
     zoom: 25
-    });
+});
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
 
-    var origin_marker = L.marker([34.973328967646175, -117.85634994506837]).addTo(map). 
-    bindPopup("<b>This is where you are at </b><br />");
+var origin_marker = L.marker([34.973328967646175, -117.85634994506837]).addTo(map). 
+bindPopup("<b>This is where you are at </b><br />");
 
-    // Set the map view to the user's location
-    // Uncomment below to set map according to user location
-    // map.locate({setView: true, maxZoom: 16});
     
 //set location based on user's location
 if (navigator.geolocation) {
@@ -311,7 +377,6 @@ var myGeoJson = L.geoJson(myData, {
     onEachFeature: onEachFeature
 }).addTo(map);
   
-
 
 //double click to set fov marker
 map.on('dblclick', function (e) {
