@@ -5,10 +5,15 @@ var latit;
 var longit;
 var fov_marker;
 var wp_marker;
+var fov_to_wp_line;
+var new_coords;
+
+const R = 6378137; // radius of earth in meters
+
 
 function style(feature) {
     return {
-        fillColor: "#FCB81E",
+        fillColor: "#ff0000",
         weight: 2,
         opacity: 1,
         color: "#CCCCCC",
@@ -30,15 +35,133 @@ function onEachFeature(feature,layer) {
     });
 }
 
+function drawLine(marker1, marker2, map){
+    var latlngs = Array();
+    latlngs.push(marker1.getLatLng());
+    latlngs.push(marker2.getLatLng());
+    var some_line = L.polyline(latlngs, {color: 'red'}).addTo(map);
+
+    return some_line;
+}
+
+function computerHaversine(marker1, marker2){
+//computes distance between two markers using haversine formula
+    lat1 = marker1.getLatLng().lat;
+    lat2 = marker2.getLatLng().lat;
+    lon1 = marker1.getLatLng().lng;
+    lon2 = marker2.getLatLng().lng;
+    	
+    const R = 6371e3; // metres
+    const psi_1 = lat1 * Math.PI/180; // units in radians
+    const psi_2 = lat2 * Math.PI/180;
+    const dlat = (lat2-lat1) * Math.PI/180;
+    const dlon = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(dlat/2) * Math.sin(dlat/2) +
+            Math.cos(psi_1) * Math.cos(psi_2) *
+            Math.sin(dlon/2) * Math.sin(dlon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    const d = R * c; // in metres
+
+    return d
+}
+
+function convertGPStoCartesian(marker1, marker2){
+    //converts gps coordinates to cartesian
+    lat1 = marker1.getLatLng().lat;
+    lat2 = marker2.getLatLng().lat;
+    lon1 = marker1.getLatLng().lng;
+    lon2 = marker2.getLatLng().lng;
+
+    dx = R * Math.cos(lat1-lat2) * Math.cos(lon1-lon2);
+    dy = R * Math.cos(lat1-lat2) * Math.sin(lon1-lon2);
+    z = R * Math.sin(lon1-lon2);
+
+    let cart_vector = [dx,dy,z];
+    return cart_vector
+}
+
+function convertCartesiantoGPS(cartersian){
+    const R = 6371e3; // metres
+
+    lat = Math.asin(cartersian[2]/R);
+    long = Math.atan2(cartersian[1]/R);
+
+    gps_vector = [lat,long];
+    return gps_vector;
+}
+
+function computeBearing(marker1, marker2){
+//compute bearing  between two marker points
+    lat1 = marker1.getLatLng().lat;
+    lat2 = marker2.getLatLng().lat;
+
+    lon1 = marker1.getLatLng().lng;
+    lon2 = marker2.getLatLng().lng;
+    	
+    const psi_1 = lat1 * Math.PI/180; // φ, λ in radians
+    const psi_2 = lat2 * Math.PI/180;
+    const dlat = (lat2-lat1) * Math.PI/180;
+    const dlon = (lon2-lon1) * Math.PI/180;
+
+    const y = Math.sin(dlon) * Math.cos(psi_2);
+    const x = Math.cos(psi_1)*Math.sin(psi_2) -
+              Math.sin(psi_1)*Math.cos(psi_2)*Math.cos(dlon);
+    const theta = Math.atan2(y, x); //wraps from 0 to pi and 0 to -pi
+    const brng = (theta*180/Math.PI + 360) % 360; // in degrees
+
+    return brng;
+}
+
+function computeDesGPS(marker, brng, d){
+
+    lat1 = marker.getLatLng().lat;
+    lon1 = marker.getLatLng().lng;
+
+    const lat_des = lat1 + Math.asin( Math.sin(lat1)*Math.cos(d/R) +
+                      Math.cos(lat1)*Math.sin(d/R)*Math.cos(brng));
+
+    const lon_des = lon1 + Math.atan2(Math.sin(brng)*Math.sin(d/R)*Math.cos(lat1),
+                            Math.cos(d/R)-Math.sin(lat1)*Math.sin(lat_des));
+
+    return [lat_des, lon_des];
+}
+
+function addSquareWP(fov_marker){
+    //makes square waypoint based on location of marker
+    lat = fov_marker.getLatLng().lat;
+    long = fov_marker.getLatLng().lng;
+
+    const des_dist = 150; // meters
+
+
+    new_latitude  = lat  + ((des_dist / R) * (180 / Math.PI));
+    new_longitude = long + ((des_dist / R) * (180 / Math.PI) / Math.cos(lat));   
+
+    wp_coords = [new_latitude, new_longitude];
+
+    return wp_coords;
+}
+
 //button
 let waypoint_btn = document.createElement("button");
 waypoint_btn.className = "setTestButton"
 waypoint_btn.innerHTML = "Set Waypoints";
 waypoint_btn.onclick = function () {
     if (fov_marker){
-        alert(fov_marker.getLatLng());
-        wp_marker = new L.CircleMarker([34.974485, -117.856656],
-            {color:'green'}).addTo(map); 
+        
+        waypoint_coords = computeDesGPS(fov_marker, 1.0, 500);
+        //waypoint_coords = addSquareWP(fov_marker);
+        console.log("wp coords", waypoint_coords);
+        
+        wp_marker = new L.CircleMarker(waypoint_coords,
+            {color:'green'}).addTo(map);
+        
+        bearing = computeBearing(fov_marker, wp_marker);
+        distance = computerHaversine(fov_marker, wp_marker);
+        console.log("distance", distance);
+        console.log("bearing", bearing);
     }
     else{
         alert("No inputs");
@@ -56,7 +179,8 @@ const map = L.map('map',{
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    var abc = L.marker([34.973328967646175, -117.85634994506837]).addTo(map);
+    var origin_marker = L.marker([34.973328967646175, -117.85634994506837]).addTo(map). 
+    bindPopup("<b>This is where you are at </b><br />");
 
     // Set the map view to the user's location
     // Uncomment below to set map according to user location
@@ -71,7 +195,7 @@ if (navigator.geolocation) {
         console.log('Long: ' + position.coords.longitude);
         longit = position.coords.longitude;
         console.log('---------------------');
-        var abc = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
+        var origin_marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
     } 
 )}
 
@@ -141,36 +265,9 @@ var myData = [{
             [ -117.85, 34.95]]]
             }
     }]}
-]
+]; 
 
-// var states = [{
-//     "type": "Feature",
-//     "properties": {"party": "Republican"},
-//     "geometry": {
-//         "type": "Polygon",
-//         "coordinates": [[
-//             [-104.05, 48.99],
-//             [-97.22,  48.98],
-//             [-96.58,  45.94],
-//             [-104.03, 45.94],
-//             [-104.05, 48.99]
-//         ]]
-//     }
-// }, {
-//     "type": "Feature",
-//     "properties": {"party": "Democrat"},
-//     "geometry": {
-//         "type": "Polygon",
-//         "coordinates": [[
-//             [-109.05, 41.00],
-//             [-102.06, 40.99],
-//             [-102.03, 36.99],
-//             [-109.04, 36.99],
-//             [-109.05, 41.00]
-//         ]]
-//     }
-// }];
-  
+
 var myGeoJson = L.geoJson(myData, {
     style: style,
     onEachFeature: onEachFeature
@@ -179,9 +276,17 @@ var myGeoJson = L.geoJson(myData, {
 
 //set to one marker
 map.on('dblclick', function (e) {
-    if (fov_marker) { // check
-        map.removeLayer(fov_marker); // remove
+    if (fov_marker) { 
+        map.removeLayer(fov_marker); 
     }
-    fov_marker = new L.Marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+
+    if (fov_to_wp_line){
+        map.removeLayer(fov_to_wp_line);
+    }
+
+    fov_marker = new L.Marker([e.latlng.lat, e.latlng.lng]).addTo(map)
+    .bindPopup("<b>Field of View Marker, you can change the marker by double clicking again</b><br />");
+    
+    fov_to_wp_line = drawLine(origin_marker, fov_marker, map);
 });
 
