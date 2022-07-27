@@ -9,8 +9,10 @@ var fov_to_wp_line;
 var new_coords;
 
 const R = 6378137; // radius of earth in meters
-
-
+const wp_deg_side0 = 90; // side of one endpoint
+const wp_deg_side1 = 270;  
+const long_side_distance = 300; // distance between long side of waypoints
+ 
 function style(feature) {
     return {
         fillColor: "#ff0000",
@@ -115,17 +117,22 @@ function computeBearing(marker1, marker2){
 }
 
 function computeDesGPS(marker, brng, d){
+    //compute desired gps location based on inputs of marker, brng(degrees) and distance(m)
+    brng_rad = brng * Math.PI/180;
 
-    lat1 = marker.getLatLng().lat;
-    lon1 = marker.getLatLng().lng;
+    lat1 = marker.getLatLng().lat * Math.PI/180;
+    lon1 = marker.getLatLng().lng * Math.PI/180;
 
-    const lat_des = lat1 + Math.asin( Math.sin(lat1)*Math.cos(d/R) +
-                      Math.cos(lat1)*Math.sin(d/R)*Math.cos(brng));
+    let lat_des =  Math.asin( Math.sin(lat1)*Math.cos(d/R) +
+                      Math.cos(lat1)*Math.sin(d/R)*Math.cos(brng_rad));
 
-    const lon_des = lon1 + Math.atan2(Math.sin(brng)*Math.sin(d/R)*Math.cos(lat1),
+    let lon_des = lon1 - Math.atan2(Math.sin(brng_rad)*Math.sin(d/R)*Math.cos(lat1),
                             Math.cos(d/R)-Math.sin(lat1)*Math.sin(lat_des));
 
+    lat_des = lat_des* 180/Math.PI;
+    lon_des = lon_des * 180/Math.PI;
     return [lat_des, lon_des];
+
 }
 
 function addSquareWP(fov_marker){
@@ -134,7 +141,6 @@ function addSquareWP(fov_marker){
     long = fov_marker.getLatLng().lng;
 
     const des_dist = 150; // meters
-
 
     new_latitude  = lat  + ((des_dist / R) * (180 / Math.PI));
     new_longitude = long + ((des_dist / R) * (180 / Math.PI) / Math.cos(lat));   
@@ -150,18 +156,27 @@ waypoint_btn.className = "setTestButton"
 waypoint_btn.innerHTML = "Set Waypoints";
 waypoint_btn.onclick = function () {
     if (fov_marker){
-        
-        waypoint_coords = computeDesGPS(fov_marker, 1.0, 500);
-        //waypoint_coords = addSquareWP(fov_marker);
-        console.log("wp coords", waypoint_coords);
-        
+
+        bearing_ori_to_fov = computeBearing(origin_marker, fov_marker); // degrees
+
+        waypoint_coords = computeDesGPS(fov_marker, wp_deg_side1-bearing_ori_to_fov, long_side_distance/2);
+        waypoint_coords_1 = computeDesGPS(fov_marker, wp_deg_side0-bearing_ori_to_fov, long_side_distance/2);
+
         wp_marker = new L.CircleMarker(waypoint_coords,
             {color:'green'}).addTo(map);
-        
-        bearing = computeBearing(fov_marker, wp_marker);
+            
+        wp_marker = new L.CircleMarker(waypoint_coords_1,
+            {color:'green'}).addTo(map);        
+
+        bearing_fov_to_wp = computeBearing(fov_marker, wp_marker);
         distance = computerHaversine(fov_marker, wp_marker);
+            
+        console.log("wp coords", waypoint_coords);
+        console.log("fov coords", fov_marker.getLatLng());
+    
         console.log("distance", distance);
-        console.log("bearing", bearing);
+        console.log("bearing_origin_to_wp", bearing_ori_to_fov);
+        console.log("bearing_fov_to_wp", bearing_fov_to_wp);
     }
     else{
         alert("No inputs");
