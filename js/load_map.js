@@ -7,6 +7,12 @@ var fov_to_wp_line;
 var new_coords;
 
 var fov_marker;
+
+var waypoint_coords0;
+var waypoint_coords1;
+var waypoint_coords2;
+var waypoint_coords3;
+
 var wp_marker0;
 var wp_marker1;
 var wp_marker2;
@@ -20,6 +26,29 @@ const wp_deg_side1 = 270;
 const long_side_distance = 350; // distance between long side of waypoints
 const short_side_distance = 150;
  
+let flight_plan = {
+    "fileType": "Plan",
+    "geoFence": {
+        "circles": [
+        ],
+        "polygons": [
+        ],
+        "version": 2
+    },
+    "groundStation": "QGroundControl",
+    "mission": {
+        "items":[],
+        "plannedHomePosition":[],
+        "vehicleType": 1,
+        "version": 2 
+    },
+    "rallyPoints": {
+        "points": [
+        ],
+        "version": 2
+    },
+    "version": 1
+}
 
 /**--------------FUNCTIONS UTILIZED--------------------------------*/
 function style(feature) {
@@ -31,6 +60,7 @@ function style(feature) {
         fillOpacity: 0.35
     };
 }
+
 
 function onEachFeature(feature,layer) {
     layer.on('mouseover', function () {
@@ -150,6 +180,86 @@ function removeMarker(marker, map){
     }
 }
 
+function saveText(text, filename){
+    var a = document.createElement('a');
+    a.setAttribute('href', 'data:text/plain;charset=utf-8,'+encodeURIComponent(text));
+    a.setAttribute('download', filename);
+    a.click()
+  }
+
+function createMissionItems(waypoint_list, num_loops){
+    /** 
+     * create mission list = []
+     * given n waypoints 
+     * given number of loops
+     * Begin for loop through n waypoints
+     * Create dictionary structure
+     * append waypoints accordingly 
+     * if about to hit last value
+     * Set loop back to frame
+    */
+
+    let item_list = [];
+    let length = waypoint_list.length;
+    console.log("waypoint length", length);
+
+    for (var i = 0; i<length; i++){
+        item_dict = {};
+        item_dict["AMSLAltAboveTerrain"] = null;
+        item_dict["Altitude"] = waypoint_list[i][2];
+        item_dict["AltitudeMode"] = 1;
+        item_dict["autoContinue"] = true;
+        item_dict["command"] = 16;
+        item_dict["doJumpId"] = i+1;
+        item_dict["frame"] = 3;
+        item_dict["params"] = [0, 0, 0, null, 
+            waypoint_list[i][0], waypoint_list[i][1],
+            waypoint_list[i][2]];
+        item_dict["type"] = "SimpleItem";
+        item_list.push(item_dict);
+    }
+
+    //add number of loops
+    item_dict = {};
+    item_dict["autoContinue"] = true;
+    item_dict["command"] = 177; // this number does the loops
+    item_dict["doJumpId"] = length+1;
+    item_dict["frame"] = 2
+    item_dict["params"] = [
+        1,
+        num_loops,
+        0,
+        0,
+        0,
+        0,
+        0
+        ];
+    item_dict["type"] = "SimpleItem";
+    item_list.push(item_dict);
+
+    ///landing approach
+    item_dict = {};
+    item_dict["altitudesAreRelative"] = true
+    item_dict["complexItemType"] = "fwLandingPattern"
+    item_dict["landCoordinate"] = [waypoint_coords1[0],
+    waypoint_coords1[1], 0];
+    item_dict["landingApproachCoordinate"] = [waypoint_coords3[0],
+    waypoint_coords3[1], waypoint_coords3[2]+10];
+
+    item_dict["loiterClockwise"] = true;
+    item_dict["loiterRadius"] = 75; //meters
+    item_dict["stopTakingPhotos"] = true;
+    item_dict["stopVideoPhotos"] = true;
+    item_dict["type"] = "ComplexItem",
+    item_dict["useLoiterToAlt"] =  true,
+    item_dict["valueSetIsDistance"] =  false,
+    item_dict["version"] =  2;
+    item_list.push(item_dict);   
+
+    
+    // console.log("list", item_list);
+    return item_list;
+}
 /**--------------CREATING WIDGETS--------------------------------*/
 //creating button widgets
 /*waypoint buton generates rectangle waypoint as follows:
@@ -209,12 +319,12 @@ waypoint_btn.onclick = function () {
         bearing_fov_to_wp = computeBearing(fov_marker, wp_marker0);
         distance = computerHaversine(fov_marker, wp_marker0);
             
-        console.log("wp coords", waypoint_coords0);
-        console.log("fov coords", fov_marker.getLatLng());
+        // console.log("wp coords", waypoint_coords0);
+        // console.log("fov coords", fov_marker.getLatLng());
     
-        console.log("distance", distance);
-        console.log("bearing_origin_to_wp", bearing_ori_to_fov);
-        console.log("bearing_fov_to_wp", bearing_fov_to_wp);
+        // console.log("distance", distance);
+        // console.log("bearing_origin_to_wp", bearing_ori_to_fov);
+        // console.log("bearing_fov_to_wp", bearing_fov_to_wp);
     }
 };
 document.body.appendChild(waypoint_btn);
@@ -271,6 +381,21 @@ confirm_button.onclick = function (){
         alert("Set your waypoints")
     }
 
+    var waypoint_list = [waypoint_coords0, waypoint_coords1, waypoint_coords2, waypoint_coords3];
+
+    var item_list = createMissionItems(waypoint_list, num_loops);
+
+    flight_plan["mission"]["cruiseSpeed"] = 15;
+    flight_plan["mission"]["firmwareType"] = 12;
+    flight_plan["mission"]["globalPlanAltitudeMode"] = 1;
+    flight_plan["mission"]["hoverSpeed"] = 5;    
+    flight_plan["mission"]["items"] = item_list;
+
+    flight_plan["mission"]["plannedHomePosition"] = [fov_marker.getLatLng().lat, 
+        fov_marker.getLatLng().lng, 700.000];
+
+    var dictstring = JSON.stringify(flight_plan, null, 4);
+    saveText( dictstring, "filename.json" );
 
 }
 document.body.appendChild(confirm_button);
