@@ -23,8 +23,8 @@ var num_loops;
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
 const wp_deg_side1 = 270;  
-const long_side_distance = 350; // distance between long side of waypoints
-const short_side_distance = 150;
+const long_side_distance = 600; // distance between long side of waypoints
+const short_side_distance = 200;
  
 let flight_plan = {
     "fileType": "Plan",
@@ -227,7 +227,7 @@ function createMissionItems(waypoint_list, num_loops){
     item_dict["frame"] = 2
     item_dict["params"] = [
         1,
-        num_loops,
+        parseInt(num_loops),
         0,
         0,
         0,
