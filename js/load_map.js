@@ -23,7 +23,7 @@ var num_loops;
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
 const wp_deg_side1 = 270;  
-const long_side_distance = 600; // distance between long side of waypoints
+const long_side_distance = 500; // distance between long side of waypoints
 const short_side_distance = 200;
  
 let flight_plan = {
@@ -411,7 +411,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
-var origin_marker = L.marker([34.973328967646175, -117.85634994506837]).addTo(map). 
+// var origin_marker;
+var origin_marker = L.marker([34.9847894, -117.8627467]).addTo(map). 
 bindPopup("<b>This is where you are at </b><br />");
 
     
@@ -424,7 +425,9 @@ if (navigator.geolocation) {
         console.log('Long: ' + position.coords.longitude);
         longit = position.coords.longitude;
         console.log('---------------------');
-        var origin_marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
+        origin_marker= L.marker([position.coords.latitude, position.coords.longitude]).addTo(map).
+        bindPopup("<b>This is where you are at </b><br />");
+
     } 
 )}
 
