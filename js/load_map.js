@@ -20,6 +20,10 @@ var wp_marker3;
 
 var num_loops;
 
+// for stacked waypoints
+var height_increment = 25; //meters
+var num_height_levels = 4; // for stacked waypoints
+
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
 const wp_deg_side1 = 270;  
@@ -187,6 +191,41 @@ function saveText(text, filename){
     a.click()
   }
 
+function stackWaypoints(wp_list, height_diff, num_levels){
+    /** takes in a list of waypoints and creates levels of waypoints
+     * ie level 1 say at 50 m
+     * 0 -------- 1 
+     * |          |
+     * |          |
+     * 3 -------- 2
+     * 
+     * if height_diff = 50m
+     * then level 2 will be at 100m (50m+height_diff)
+     * 4 -------- 5 
+     * |          |
+     * |          |
+     * 7 -------- 6
+     * 
+    */
+
+    //starting at 2 since base level is already set
+    for (let i=1; i<=(num_levels-1); i++) {
+        
+        let wp_0 = [wp_list[0][0], wp_list[0][1], wp_list[0][2]+height_diff*(i)];
+        let wp_1 = [wp_list[1][0], wp_list[1][1], wp_list[1][2]+height_diff*(i)];
+        let wp_2 = [wp_list[2][0], wp_list[2][1], wp_list[2][2]+height_diff*(i)];
+        let wp_3 = [wp_list[3][0], wp_list[3][1], wp_list[3][2]+height_diff*(i)];
+        console.log("height to be at ", wp_list[1][2]+height_diff*(i), " ",i)
+        // console.log("loop", wp_0, wp_1, wp_2, wp_3);
+        wp_list.push(wp_0);
+        wp_list.push(wp_1);
+        wp_list.push(wp_2);
+        wp_list.push(wp_3);
+    }
+
+    return wp_list;
+}
+
 function createMissionItems(waypoint_list, num_loops){
     /** 
      * create mission list = []
@@ -194,7 +233,7 @@ function createMissionItems(waypoint_list, num_loops){
      * given number of loops
      * Begin for loop through n waypoints
      * Create dictionary structure
-     * append waypoints accordingly 
+     * append waypoints accordingly 1
      * if about to hit last value
      * Set loop back to frame
     */
@@ -363,7 +402,7 @@ confirm_button.innerHTML = "Confirm";
 confirm_button.onclick = function (){
 
     num_loops = document.getElementById("num_waypoints").value;
-    console.log("entry value is", num_loops);
+    console.log("number of loops", num_loops);
 
     if (!flight_alt){
         alert("Set your flight altitude")
@@ -382,6 +421,9 @@ confirm_button.onclick = function (){
     }
 
     var waypoint_list = [waypoint_coords0, waypoint_coords1, waypoint_coords2, waypoint_coords3];
+
+    waypoint_list = stackWaypoints(waypoint_list, height_increment, num_height_levels);
+    // console.log("wp coords", waypoint_list);
 
     var item_list = createMissionItems(waypoint_list, num_loops);
 
@@ -498,7 +540,6 @@ var myData = [{
             }
     }]}
 ]; 
-
 
 var myGeoJson = L.geoJson(myData, {
     style: style,
