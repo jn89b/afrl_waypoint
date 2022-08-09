@@ -27,8 +27,8 @@ var num_height_levels = 4; // for stacked waypoints
 const R = 6378137; // radius of earth in meters
 const wp_deg_side0 = 90; // side of one endpoint
 const wp_deg_side1 = 270;  
-const long_side_distance = 500; // distance between long side of waypoints
-const short_side_distance = 200;
+const long_side_distance = 600; // distance between long side of waypoints
+const short_side_distance = 300;
  
 let flight_plan = {
     "fileType": "Plan",
@@ -208,7 +208,6 @@ function stackWaypoints(wp_list, height_diff, num_levels){
      * 
     */
 
-    //starting at 2 since base level is already set
     for (let i=1; i<=(num_levels-1); i++) {
         
         let wp_0 = [wp_list[0][0], wp_list[0][1], wp_list[0][2]+height_diff*(i)];
@@ -242,14 +241,41 @@ function createMissionItems(waypoint_list, num_loops){
     let length = waypoint_list.length;
     console.log("waypoint length", length);
 
+    var jump_num = 0;
+
     for (var i = 0; i<length; i++){
+        // console.log("i", i)
+        
+        //need to refactor this set to input of function
+        if (i % num_height_levels == 0 && i != 0){
+            jump_num++;
+            item_dict = {};
+            item_dict["autoContinue"] = true;
+            item_dict["command"] = 177; // this number does the loops
+            item_dict["doJumpId"] = i + jump_num;
+            item_dict["frame"] = 2
+            item_dict["params"] = [
+                i + jump_num - num_height_levels,
+                parseInt(num_loops),
+                0,
+                0,
+                0,
+                0,
+                0
+                ];
+            item_dict["type"] = "SimpleItem";
+            item_list.push(item_dict);
+        }
+
+        console.log("jump_num", jump_num);
+
         item_dict = {};
         item_dict["AMSLAltAboveTerrain"] = null;
         item_dict["Altitude"] = waypoint_list[i][2];
         item_dict["AltitudeMode"] = 1;
         item_dict["autoContinue"] = true;
         item_dict["command"] = 16;
-        item_dict["doJumpId"] = i+1;
+        item_dict["doJumpId"] = jump_num + i + 1;
         item_dict["frame"] = 3;
         item_dict["params"] = [0, 0, 0, null, 
             waypoint_list[i][0], waypoint_list[i][1],
@@ -258,6 +284,12 @@ function createMissionItems(waypoint_list, num_loops){
         item_list.push(item_dict);
     }
 
+    // // add number of loops
+    // for (var i = 0; i < item_list.length; i++){
+    //     if (i % num_height_levels == 0 && i != 0){
+
+    // }
+
     //add number of loops
     item_dict = {};
     item_dict["autoContinue"] = true;
@@ -265,7 +297,7 @@ function createMissionItems(waypoint_list, num_loops){
     item_dict["doJumpId"] = length+1;
     item_dict["frame"] = 2
     item_dict["params"] = [
-        1,
+        item_list.length + 1 - num_height_levels,
         parseInt(num_loops),
         0,
         0,
@@ -275,7 +307,6 @@ function createMissionItems(waypoint_list, num_loops){
         ];
     item_dict["type"] = "SimpleItem";
     item_list.push(item_dict);
-
     ///landing approach
     item_dict = {};
     item_dict["altitudesAreRelative"] = true
@@ -454,7 +485,7 @@ attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStree
 }).addTo(map);
 
 // var origin_marker;
-var origin_marker = L.marker([34.9847894, -117.8627467]).addTo(map). 
+var origin_marker = L.marker([34.9750798, -117.8579150]).addTo(map). 
 bindPopup("<b>This is where you are at </b><br />");
 
     
